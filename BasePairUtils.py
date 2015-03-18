@@ -4,6 +4,7 @@ from collections import OrderedDict
 
 class BasePairUtils(object):
 
+
     BAM_CMATCH = 0
     BAM_CINS = 1
     BAM_CDEL = 2

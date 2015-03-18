@@ -13,11 +13,11 @@ class BasePairReadKnapsack(object):
         self._ref_allele = ref_allele
         self._pileupreads = OrderedDict()
         self._base_pair_descriptors = OrderedDict()
-        self._name = BasePairUtils.retrieve_position_name(chrom, start, end)
+        self._pileupcolumn_name = BasePairUtils.retrieve_position_name(chrom, start, end)
 
     @property
-    def name(self):
-        return self._name
+    def pileupcolumn_name(self):
+        return self._pileupcolumn_name
 
     @property
     def chrom(self):
@@ -51,8 +51,8 @@ class BasePairReadKnapsack(object):
         return BasePairReadKnapsack.BasePairAggregateCounts.create(self._pileupreads, self._base_pair_descriptors)
 
     @classmethod
-    def create(cls, chrom, start, end, pileupcolumn, refseqfile):
-        ref_allele = refseqfile.fetch(chrom, start=start, end=end)  # [start,end) region is called
+    def create(cls, chrom, start, end, pileupcolumn, ref_seq_file):
+        ref_allele = ref_seq_file.fetch(chrom, start=start, end=end)  # [start,end) region is called
         knapsack = BasePairReadKnapsack(chrom=chrom, start=start, end=end, ref_allele=ref_allele)
         for pileupread in pileupcolumn.pileups:
             knapsack.insert_pileupread(pileupread)
