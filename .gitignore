@@ -1,3 +1,4 @@
 /private_data/*
 /scripts
 *.pyc
+*.maf
