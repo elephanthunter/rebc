@@ -6,13 +6,20 @@ class BasePairReadKnapsack(object):
 
     # TODO: What to do about overlapping reads? Because I am using a dictionary, it should not matter.
 
-    def __init__(self, chrom, start, end, ref_allele):
+    def __init__(self, chrom, start, end, ref_allele, pileupreads):
         self._chrom = chrom
         self._start = start
         self._end = end
         self._ref_allele = ref_allele
-        self._pileupreads = OrderedDict()
+        self._pileupreads = pileupreads
         self._base_pair_descriptors = OrderedDict()
+
+        # Create and insert base pair descriptors from each pileup read
+        for pileupread_name in pileupreads:
+            pileupread = pileupreads[pileupread_name]
+            self._base_pair_descriptors[pileupread_name] = \
+                BasePairReadKnapsack.BasePairDescriptor.create(position=self._start, ref_allele=self._ref_allele,
+                                                               pileupread=pileupread)
         self._pileupcolumn_name = BasePairUtils.retrieve_position_name(chrom, start, end)
 
     @property
@@ -39,24 +46,16 @@ class BasePairReadKnapsack(object):
     def pileupreads(self):
         return self._pileupreads
 
-    def insert_pileupread(self, pileupread):
-        self._pileupreads[pileupread.alignment.query_name] = pileupread  # overlapping reads will be removed
-
-        # Create and insert base pair descriptors
-        self._base_pair_descriptors[pileupread.alignment.query_name] = \
-            BasePairReadKnapsack.BasePairDescriptor.create(position=self._start, ref_allele=self._ref_allele,
-                                                           pileupread=pileupread)
-
-    def retrieve_base_pair_aggregate_counts(self):
+    @property
+    def base_pair_aggregate_counts(self):
         return BasePairReadKnapsack.BasePairAggregateCounts.create(self._pileupreads, self._base_pair_descriptors)
 
     @classmethod
-    def create(cls, chrom, start, end, pileupcolumn, ref_seq_file):
-        ref_allele = ref_seq_file.fetch(chrom, start=start, end=end)  # [start,end) region is called
-        knapsack = BasePairReadKnapsack(chrom=chrom, start=start, end=end, ref_allele=ref_allele)
+    def create(cls, chrom, start, end, ref_allele, pileupcolumn):
+        pileupreads = OrderedDict()
         for pileupread in pileupcolumn.pileups:
-            knapsack.insert_pileupread(pileupread)
-        return knapsack
+            pileupreads[pileupread.alignment.query_name] = pileupread
+        return BasePairReadKnapsack(chrom=chrom, start=start, end=end, ref_allele=ref_allele, pileupreads=pileupreads)
 
     class BasePairDescriptor(object):
         def __init__(self, ref_allele, alt_allele, is_ref, is_alt, is_ins, is_del, is_soft_clipped):

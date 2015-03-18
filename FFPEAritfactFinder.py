@@ -10,6 +10,7 @@ from collections import OrderedDict
 from BasePairUtils import BasePairUtils
 from ArtifactContingencyTableAnalysis import ArtifactContingencyTableAnalysis
 from BasePairReadKnapsack import BasePairReadKnapsack
+from PileupReadKnapsack import PileupReadKnapsack
 
 # Q. Does reverse strand impact query sequence?
 # A. No, it does not. Pysam orders them correctly.
@@ -132,23 +133,28 @@ def retrieve_mutational_features(mutations_dataframe, case_sample_bam_filename, 
         ref_allele = mutation_row["Reference_Allele"]
         alt_allele = mutation_row["Tumor_Seq_Allele2"]
 
-        case_base_pair_mask = BasePairMask.create(chrom=chrom, start=start, end=end, bam_file=case_sample_bam_file,
-                                                  ref_seq_file=ref_seq_file)
-        control_base_pair_mask = BasePairMask.create(chrom=chrom, start=start, end=end,
-                                                     bam_file=control_sample_bam_file, ref_seq_file=ref_seq_file)
-        binarized_position_names_mask = BasePairUtils.intersect_base_pair_masks(base_pair_mask1=case_base_pair_mask,
-                                                                                base_pair_mask2=control_base_pair_mask)
+        # Gather data for cases
+        case_pileupread_knapsack = PileupReadKnapsack.create(chrom, start, end, case_sample_bam_file, ref_seq_file)
+        case_base_pair_mask = BasePairMask.create(case_pileupread_knapsack)
 
-        case_contingency_table = \
-            ArtifactContingencyTableAnalysis.create(chrom=chrom, start=start, end=end, ref_allele=ref_allele,
-                                                    alt_allele=alt_allele, bam_file=case_sample_bam_file,
-                                                    binarized_position_names_mask=binarized_position_names_mask,
-                                                    ref_seq_file=ref_seq_file)
-        control_contingency_table = \
-            ArtifactContingencyTableAnalysis.create(chrom=chrom, start=start, end=end, ref_allele=ref_allele,
-                                                    alt_allele=alt_allele, bam_file=control_sample_bam_file,
-                                                    binarized_position_names_mask=binarized_position_names_mask,
-                                                    ref_seq_file=ref_seq_file)
+        # Gather data for controls
+        control_pileupread_knapsack = PileupReadKnapsack.create(chrom, start, end, control_sample_bam_file,
+                                                                ref_seq_file)
+        control_base_pair_mask = BasePairMask.create(control_pileupread_knapsack)
+
+        # Determine what positions to mask
+        position_names_mask = BasePairUtils.intersect_base_pair_masks(case_base_pair_mask, control_base_pair_mask)
+
+        # case_contingency_table = \
+        #     ArtifactContingencyTableAnalysis.create(chrom=chrom, start=start, end=end, ref_allele=ref_allele,
+        #                                             alt_allele=alt_allele, bam_file=case_sample_bam_file,
+        #                                             binarized_position_names_mask=binarized_position_names_mask,
+        #                                             ref_seq_file=ref_seq_file)
+        # control_contingency_table = \
+        #     ArtifactContingencyTableAnalysis.create(chrom=chrom, start=start, end=end, ref_allele=ref_allele,
+        #                                             alt_allele=alt_allele, bam_file=control_sample_bam_file,
+        #                                             binarized_position_names_mask=binarized_position_names_mask,
+        #                                             ref_seq_file=ref_seq_file)
 
 
     case_sample_bam_file.close()

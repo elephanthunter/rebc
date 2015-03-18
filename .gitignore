@@ -1,4 +1,4 @@
-/private_data/*
+/private_data
 /scripts
 *.pyc
 *.maf
