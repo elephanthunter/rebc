@@ -11,7 +11,7 @@ class BasePairUtils(object):
     BAM_CSOFT_CLIP = 4
 
     @staticmethod
-    def retrieve_position_name(chrom, start, end):
+    def retrieve_pileupcolumn_name(chrom, start, end):
         return chrom + ":" + str(start) + ":" + str(end)
 
     @staticmethod

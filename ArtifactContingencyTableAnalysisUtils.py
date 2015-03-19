@@ -65,7 +65,7 @@ class ArtifactContingencyTableAnalysisUtils():
             for aligned_pair in pileupread.aligned_pairs:  # soft clips are removed, ins positions appear as "None"
                 aligned_pair_position = aligned_pair[1]  # retrieve position ("None" for ins)
                 if aligned_pair[0] is not None and aligned_pair_position is not None:  # position either an alt or a ref
-                    aligned_pair_position_name = BasePairUtils.retrieve_position_name(chrom, aligned_pair_position,
+                    aligned_pair_position_name = BasePairUtils.retrieve_pileupcolumn_name(chrom, aligned_pair_position,
                                                                                       aligned_pair_position+1)
                     is_prev_del_aligned_pair_position_masked = False
                     # as these are SNPs, we do not need to check for binarization
@@ -88,7 +88,7 @@ class ArtifactContingencyTableAnalysisUtils():
                             is_prev_aligned_pair_position_masked = True
                             count += 1
                 elif aligned_pair[0] is None:  # position is a del (aligned to ref but not within read)
-                    aligned_pair_position_name = BasePairUtils.retrieve_position_name(chrom, aligned_pair_position,
+                    aligned_pair_position_name = BasePairUtils.retrieve_pileupcolumn_name(chrom, aligned_pair_position,
                                                                                       aligned_pair_position+1)
                     if aligned_pair_position_name in binarized_position_names_mask and \
                             aligned_pair_position_name in ref_alleles:
@@ -129,7 +129,7 @@ class ArtifactContingencyTableAnalysisUtils():
                 aligned_pair = pileupread.alignment.aligned_pairs[aligned_pair_index]
                 aligned_pair_position = aligned_pair[1]  # retrieve position ("None" for ins)
                 if aligned_pair[0] is not None and aligned_pair_position is not None:  # position is either an alt or a ref
-                    aligned_pair_position_name = BasePairUtils.retrieve_position_name(chrom, aligned_pair_position,
+                    aligned_pair_position_name = BasePairUtils.retrieve_pileupcolumn_name(chrom, aligned_pair_position,
                                                                                       aligned_pair_position+1)
                     # as these are SNPs, we do not need to check for binarization
                     if aligned_pair_position_name in position_names_mask and \
@@ -149,13 +149,35 @@ class ArtifactContingencyTableAnalysisUtils():
         return count
 
     @staticmethod
+    def squeeze_pileupread_knapsack():
+        return None
+
+
+    # walk across the positions
+    # for a given position, retrieve pileupreads at that location
+    # iterate over those pileupreads and determine whether they are part of the the pivot pileup
+    # if the read belongs to that set, get the number of alts for it
+    @staticmethod
+    def retrieve_ref_bp_count(pileupread_knapsack, binary_pileupcolumn_names_mask):
+
+        for pileupcolumn_name in binary_pileupcolumn_names_mask:
+            if binary_pileupcolumn_names_mask[pileupcolumn_name]:  # position is masked
+                continue
+            pileupread_knapsack = pileupread_knapsack[pileupcolumn_name]
+
+            pass
+
+        return -1
+
+
+    @staticmethod
     def retrieve_ref_alleles(chrom, start, end, refseqfile):
         ref_alleles = OrderedDict()
         start -= 100
         end += 101
         ref_seq = refseqfile.fetch(reference=chrom, start=start, end=end)
         for offset in range(0, len(ref_seq)):
-            position_name = BasePairUtils.retrieve_position_name(chrom=chrom, start=start+offset,
+            position_name = BasePairUtils.retrieve_pileupcolumn_name(chrom=chrom, start=start+offset,
                                                                  end=start+offset+1)
             ref_alleles[position_name] = ref_seq[offset]
         return ref_alleles

@@ -9,8 +9,8 @@ from BasePairMask import BasePairMask
 from collections import OrderedDict
 from BasePairUtils import BasePairUtils
 from ArtifactContingencyTableAnalysis import ArtifactContingencyTableAnalysis
-from BasePairReadKnapsack import BasePairReadKnapsack
 from PileupReadKnapsack import PileupReadKnapsack
+from PileupColumnKnapsack import PileupColumnKnapsack
 
 # Q. Does reverse strand impact query sequence?
 # A. No, it does not. Pysam orders them correctly.
@@ -143,13 +143,12 @@ def retrieve_mutational_features(mutations_dataframe, case_sample_bam_filename, 
         control_base_pair_mask = BasePairMask.create(control_pileupread_knapsack)
 
         # Determine what positions to mask
-        position_names_mask = BasePairUtils.intersect_base_pair_masks(case_base_pair_mask, control_base_pair_mask)
+        binary_position_names_mask = BasePairUtils.intersect_base_pair_masks(case_base_pair_mask, control_base_pair_mask)
 
-        # case_contingency_table = \
-        #     ArtifactContingencyTableAnalysis.create(chrom=chrom, start=start, end=end, ref_allele=ref_allele,
-        #                                             alt_allele=alt_allele, bam_file=case_sample_bam_file,
-        #                                             binarized_position_names_mask=binarized_position_names_mask,
-        #                                             ref_seq_file=ref_seq_file)
+        case_contingency_table = \
+            ArtifactContingencyTableAnalysis.create(chrom, start, end, ref_allele, alt_allele, case_pileupread_knapsack,
+                                                    binary_position_names_mask=binary_position_names_mask,
+                                                    ref_seq_file=ref_seq_file)
         # control_contingency_table = \
         #     ArtifactContingencyTableAnalysis.create(chrom=chrom, start=start, end=end, ref_allele=ref_allele,
         #                                             alt_allele=alt_allele, bam_file=control_sample_bam_file,

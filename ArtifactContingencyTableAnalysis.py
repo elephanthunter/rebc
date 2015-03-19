@@ -193,7 +193,7 @@ class ArtifactContingencyTableAnalysis(object):
                 [dataTable.alt_ref_soft_clipped_pileupread_bp_count, dataTable.ref_ref_soft_clipped_pileupread_bp_count]]
 
     @classmethod
-    def create(cls, chrom, start, end, ref_allele, alt_allele, bam_file, binarized_position_names_mask=None,
+    def create(cls, chrom, start, end, ref_allele, alt_allele, pileupread_knapsack, binary_position_names_mask=None,
                ref_seq_file=None):
 
         alt_non_ref_pileupread_bp_count = 0
@@ -240,7 +240,7 @@ class ArtifactContingencyTableAnalysis(object):
                     #                 chrom, binarized_position_names_mask, ref_alleles, binarize_indel_lengths=True)
                             ref_ref_pileupread_bp_count += \
                                 ArtifactContingencyTableAnalysisUtils.retrieve_ref_pileupread_bp_count(pileupread,
-                                    chrom, binarized_position_names_mask, ref_alleles)
+                                    chrom, binary_position_names_mask, ref_alleles)
                             # TODO: subtract 1 in cases where it is ref supporting
 
                     #         ref_soft_clipped_pileupread_bp_count += \

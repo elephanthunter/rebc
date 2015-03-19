@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from BasePairReadKnapsack import BasePairReadKnapsack
+from PileupReadKnapsack import PileupReadKnapsack
 from BasePairUtils import BasePairUtils
 
 
@@ -24,12 +24,11 @@ class BasePairMask(object):
     def create(pileupread_knapsacks):
         base_pair_read_knapsacks = OrderedDict()
         mask = OrderedDict()
-        for pileupcolumn_name in pileupread_knapsacks.base_pair_read_knapsacks:
-            base_pair_read_knapsack = pileupread_knapsacks.base_pair_read_knapsacks[pileupcolumn_name]
+        for pileupcolumn_name in pileupread_knapsacks.pileupread_knapsacks:
+            base_pair_read_knapsack = pileupread_knapsacks.pileupread_knapsacks[pileupcolumn_name]
                 # aggregate_counts = pileupread_knapsack.base_pair_aggregate_counts
                 # TODO: Using aggregate counts, determine whether the base pair should be masked or not
                 # For now, set all of them to True
-
             mask[pileupcolumn_name] = False
 
         return BasePairMask(mask, base_pair_read_knapsacks)
