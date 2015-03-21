@@ -15,11 +15,12 @@ class BasePairUtils(object):
         return chrom + ":" + str(start) + ":" + str(end)
 
     @staticmethod
-    def intersect_base_pair_masks(base_pair_mask1, base_pair_mask2):
+    def intersect_pileupcolumn_masks(pileupcolumn_mask1, pileupcolumn_mask2):
         mask = OrderedDict()
-        for position_name in base_pair_mask1.mask:
-            if position_name in base_pair_mask2.mask:
-                mask[position_name] = base_pair_mask1.mask[position_name] | base_pair_mask2.mask[position_name]
+        for pileupcolumn_name in pileupcolumn_mask1.mask:
+            if pileupcolumn_name in pileupcolumn_mask2.mask:
+                mask[pileupcolumn_name] = \
+                    pileupcolumn_mask1.mask[pileupcolumn_name] | pileupcolumn_mask2.mask[pileupcolumn_name]
         return mask
 
     @staticmethod

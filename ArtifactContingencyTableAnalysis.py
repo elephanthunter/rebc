@@ -193,8 +193,7 @@ class ArtifactContingencyTableAnalysis(object):
                 [dataTable.alt_ref_soft_clipped_pileupread_bp_count, dataTable.ref_ref_soft_clipped_pileupread_bp_count]]
 
     @classmethod
-    def create(cls, chrom, start, end, ref_allele, alt_allele, pileupread_knapsack, binary_position_names_mask=None,
-               ref_seq_file=None):
+    def create(cls, ref_allele, alt_allele, pileupcolumn, pileupcolumn_knapsack, pileupcolumn_mask=None):
 
         alt_non_ref_pileupread_bp_count = 0
         alt_ref_pileupread_bp_count = 0
@@ -208,40 +207,39 @@ class ArtifactContingencyTableAnalysis(object):
         ref_overlapping_aligned_segment_count = 0
         alt_overlapping_aligned_segment_count = 0
 
-        ref_alleles = ArtifactContingencyTableAnalysisUtils.retrieve_ref_alleles(chrom=chrom, start=start, end=end,
-                                                                                 refseqfile=ref_seq_file)
-        for pileupcolumn in bam_file.pileup(chrom, start, end, truncate=True):
-            if pileupcolumn.pos == start:
-                aligned_segment_names = set()
+        # ref_alleles = ArtifactContingencyTableAnalysisUtils.retrieve_ref_alleles(chrom=chrom, start=start, end=end,
+        #                                                                          refseqfile=ref_seq_file)
 
-                for pileupread in pileupcolumn.pileups:
-                    is_indel = ArtifactContingencyTableAnalysisUtils.pileupread_has_indel(pileupread)  # not used
-                    is_ref = ArtifactContingencyTableAnalysisUtils.pileupread_has_ref_allele(pileupread, ref_allele)
-                    is_alt = ArtifactContingencyTableAnalysisUtils.pileupread_has_alt_allele(pileupread, alt_allele)
+        aligned_segment_names = set()
+
+        for pileupread in pileupcolumn.pileups:
+            is_indel = ArtifactContingencyTableAnalysisUtils.pileupread_has_indel(pileupread)  # not used
+            is_ref = ArtifactContingencyTableAnalysisUtils.pileupread_has_ref_allele(pileupread, ref_allele)
+            is_alt = ArtifactContingencyTableAnalysisUtils.pileupread_has_alt_allele(pileupread, alt_allele)
 
                     # print "%s:%s:%s:%s:%s:%s:%s:%s" % \
                     #       (pileupread.alignment.query_name, chrom, start, ref_allele, alt_allele, is_indel, is_ref,
                     #        is_alt)
                     # continue
 
-                    if pileupread.alignment.query_name in aligned_segment_names:  # remove overlapping reads
-                        # is the read in the ref or alt bag or neither?
-                        if not is_indel and is_ref and not is_alt:
-                            ref_overlapping_aligned_segment_count += 1
-                        elif not is_indel and not is_ref and is_alt:
-                            alt_overlapping_aligned_segment_count += 1
-                        else:  # indel based pivots and non-biallelic leftovers
-                            pass
-                    else:
-                        aligned_segment_names.add(pileupread.alignment.query_name)
-                        if is_ref and not is_indel and not is_alt:
-                    #         ref_non_ref_pileupread_bp_count += \
-                    #             ArtifactContingencyTableAnalysisUtils.retrieve_non_ref_pileupread_bp_count(pileupread,
-                    #                 chrom, binarized_position_names_mask, ref_alleles, binarize_indel_lengths=True)
-                            ref_ref_pileupread_bp_count += \
-                                ArtifactContingencyTableAnalysisUtils.retrieve_ref_pileupread_bp_count(pileupread,
-                                    chrom, binary_position_names_mask, ref_alleles)
-                            # TODO: subtract 1 in cases where it is ref supporting
+                    # if pileupread.alignment.query_name in aligned_segment_names:  # remove overlapping reads
+                    #     # is the read in the ref or alt bag or neither?
+                    #     if not is_indel and is_ref and not is_alt:
+                    #         ref_overlapping_aligned_segment_count += 1
+                    #     elif not is_indel and not is_ref and is_alt:
+                    #         alt_overlapping_aligned_segment_count += 1
+                    #     else:  # indel based pivots and non-biallelic leftovers
+                    #         pass
+                    # else:
+                    #     aligned_segment_names.add(pileupread.alignment.query_name)
+                    #     if is_ref and not is_indel and not is_alt:
+                    # #         ref_non_ref_pileupread_bp_count += \
+                    # #             ArtifactContingencyTableAnalysisUtils.retrieve_non_ref_pileupread_bp_count(pileupread,
+                    # #                 chrom, binarized_position_names_mask, ref_alleles, binarize_indel_lengths=True)
+                    #         ref_ref_pileupread_bp_count += \
+                    #             ArtifactContingencyTableAnalysisUtils.retrieve_ref_pileupread_bp_count(pileupread,
+                    #                 chrom, binary_position_names_mask, ref_alleles)
+                    #         # TODO: subtract 1 in cases where it is ref supporting
 
                     #         ref_soft_clipped_pileupread_bp_count += \
                     #             ArtifactContingencyTableAnalysisUtils.retrieve_soft_clipped_pileupread_bp_count(pileupread,
@@ -259,7 +257,7 @@ class ArtifactContingencyTableAnalysis(object):
                     #                 binarized_position_names_mask, binarize_soft_clipped_lengths=True)
                     #     else:  # multi-allelic sites
                     #         pass
-            break  # only one pass permitted
+            # break  # only one pass permitted
 
         return ArtifactContingencyTableAnalysis(alt_non_ref_pileupread_bp_count=alt_non_ref_pileupread_bp_count,
                                                 alt_ref_pileupread_bp_count=alt_ref_pileupread_bp_count,

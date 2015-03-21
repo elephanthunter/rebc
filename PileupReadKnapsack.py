@@ -12,18 +12,17 @@ class PileupReadKnapsack(object):
         self._end = end
         self._ref_allele = ref_allele
         self._pileupreads = pileupreads
-        self._pileupread_base_pair_descriptors = OrderedDict()
+        self._alignment_sequence_base_descriptors = OrderedDict()
 
         # Create and insert base pair descriptors from each pileup read
         for pileupread_alignment_query_name in pileupreads:
             pileupread = pileupreads[pileupread_alignment_query_name]
-            self._pileupread_base_pair_descriptors[pileupread_alignment_query_name] = \
-                PileupReadKnapsack.BasePairDescriptor.create(position=self._start, ref_allele=self._ref_allele,
-                                                               pileupread=pileupread)
+            self._alignment_sequence_base_descriptors[pileupread_alignment_query_name] = \
+                PileupReadKnapsack.AlignmentSequenceBaseDescriptor.create(start, ref_allele, pileupread)
 
     @property
     def pileupread_alignment_query_names(self):
-        return self._pileupread_base_pair_descriptors
+        return self._alignment_sequence_base_descriptors.keys()
 
     @property
     def chrom(self):
@@ -47,7 +46,8 @@ class PileupReadKnapsack(object):
 
     @property
     def base_pair_aggregate_counts(self):
-        return PileupReadKnapsack.BasePairAggregateCounts.create(self._pileupreads, self._base_pair_descriptors)
+        return PileupReadKnapsack.BasePairAggregateCounts.create(self._pileupreads,
+                                                                 self._alignment_sequence_base_descriptors)
 
     @classmethod
     def create(cls, chrom, start, end, ref_allele, pileupcolumn):
@@ -56,7 +56,7 @@ class PileupReadKnapsack(object):
             pileupreads[pileupread.alignment.query_name] = pileupread
         return PileupReadKnapsack(chrom=chrom, start=start, end=end, ref_allele=ref_allele, pileupreads=pileupreads)
 
-    class BasePairDescriptor(object):
+    class AlignmentSequenceBaseDescriptor(object):
         def __init__(self, ref_allele, alt_allele, is_ref, is_alt, is_ins, is_del, is_soft_clipped):
             self._ref_allele = ref_allele
             self._alt_allele = alt_allele
@@ -70,45 +70,47 @@ class PileupReadKnapsack(object):
         def create(position, ref_allele, pileupread):
             alt_allele = None
             is_ref = is_alt = is_ins = is_del = is_soft_clipped = False
-            aligned_pair_positions = [aligned_pair[1] for aligned_pair in pileupread.alignment.aligned_pairs]
 
             # soft clips appear either at the beginning or at the end of the aligned read
-            if aligned_pair_positions[0] > position or aligned_pair_positions[-1] < position:
-                alt_allele = None
+            if pileupread.alignment.aligned_pairs[0][1] > position or \
+                    pileupread.alignment.aligned_pairs[-1][1] < position:
                 is_soft_clipped = True
-                return PileupReadKnapsack.BasePairDescriptor(ref_allele=ref_allele, alt_allele=alt_allele,
-                                                               is_ref=is_ref, is_alt=is_alt, is_ins=is_ins,
-                                                               is_del=is_del, is_soft_clipped=is_soft_clipped)
+                return PileupReadKnapsack.AlignmentSequenceBaseDescriptor(ref_allele=ref_allele, alt_allele=alt_allele,
+                                                                          is_ref=is_ref, is_alt=is_alt, is_ins=is_ins,
+                                                                          is_del=is_del,
+                                                                          is_soft_clipped=is_soft_clipped)
 
             if pileupread.is_del:  # deletions' positions are NOT included in the aligned read
-                alt_allele = None
                 is_del = True
-                return PileupReadKnapsack.BasePairDescriptor(ref_allele=ref_allele, alt_allele=alt_allele,
-                                                               is_ref=is_ref, is_alt=is_alt, is_ins=is_ins,
-                                                               is_del=is_del, is_soft_clipped=is_soft_clipped)
+                return PileupReadKnapsack.AlignmentSequenceBaseDescriptor(ref_allele=ref_allele, alt_allele=alt_allele,
+                                                                          is_ref=is_ref, is_alt=is_alt, is_ins=is_ins,
+                                                                          is_del=is_del,
+                                                                          is_soft_clipped=is_soft_clipped)
 
-            # insertions appear as "None"'s w.r.t. position
+            # insertions appear as "None"'s w.r.t. position (positions around the ins are inserts)
+            aligned_pair_positions = [aligned_pair[1] for aligned_pair in pileupread.alignment.aligned_pairs]
             aligned_pair_position_index = aligned_pair_positions.index(position)
             if not (aligned_pair_position_index+1 < len(aligned_pair_positions) and
                     not aligned_pair_positions[aligned_pair_position_index+1]) or \
                     (aligned_pair_position_index-1 > 0 and not aligned_pair_positions[aligned_pair_position_index-1]):
-                alt_allele = None
                 is_ins = True
-                return PileupReadKnapsack.BasePairDescriptor(ref_allele=ref_allele, alt_allele=alt_allele,
-                                                               is_ref=is_ref, is_alt=is_alt, is_ins=is_ins,
-                                                               is_del=is_del, is_soft_clipped=is_soft_clipped)
+                return PileupReadKnapsack.AlignmentSequenceBaseDescriptor(ref_allele=ref_allele, alt_allele=alt_allele,
+                                                                          is_ref=is_ref, is_alt=is_alt, is_ins=is_ins,
+                                                                          is_del=is_del,
+                                                                          is_soft_clipped=is_soft_clipped)
 
             if pileupread.alignment.query_sequence[pileupread.query_position] == ref_allele:
                 is_ref = True
-                return PileupReadKnapsack.BasePairDescriptor(ref_allele=ref_allele, alt_allele=alt_allele,
-                                                               is_ref=is_ref, is_alt=is_alt, is_ins=is_ins,
-                                                               is_del=is_del, is_soft_clipped=is_soft_clipped)
+                return PileupReadKnapsack.AlignmentSequenceBaseDescriptor(ref_allele=ref_allele, alt_allele=alt_allele,
+                                                                          is_ref=is_ref, is_alt=is_alt, is_ins=is_ins,
+                                                                          is_del=is_del,
+                                                                          is_soft_clipped=is_soft_clipped)
 
             alt_allele = pileupread.alignment.query_sequence[pileupread.query_position]
             is_alt = True
-            return PileupReadKnapsack.BasePairDescriptor(ref_allele=ref_allele, alt_allele=alt_allele, is_ref=is_ref,
-                                                           is_alt=is_alt, is_ins=is_ins, is_del=is_del,
-                                                           is_soft_clipped=is_soft_clipped)
+            return PileupReadKnapsack.AlignmentSequenceBaseDescriptor(ref_allele=ref_allele, alt_allele=alt_allele,
+                                                                      is_ref=is_ref, is_alt=is_alt, is_ins=is_ins,
+                                                                      is_del=is_del, is_soft_clipped=is_soft_clipped)
 
         @property
         def ref_allele(self):
@@ -187,17 +189,17 @@ class PileupReadKnapsack(object):
             return None
 
         @staticmethod
-        def create(start, ref_allele, pileupreads, base_pair_descriptors):
+        def create(start, ref_allele, pileupreads, alignment_sequence_base_descriptors):
             num_alt_adenine = num_alt_thymine = num_alt_guanine = num_alt_cytosine = None
             num_ref = num_alt = num_ins = num_del = num_soft_clipped = 0
 
             soft_clipped_aligned_segment_names = []
-            for aligned_segment_name in base_pair_descriptors:
+            for aligned_segment_name in alignment_sequence_base_descriptors:
                 if aligned_segment_name in pileupreads:
-                    base_pair_descriptor = base_pair_descriptors[aligned_segment_name]
-                    alt_allele = base_pair_descriptor.alt_allele  # None for del, ins and soft clipped
+                    alignment_sequence_base_descriptor = alignment_sequence_base_descriptors[aligned_segment_name]
+                    alt_allele = alignment_sequence_base_descriptor.alt_allele  # None for del, ins and soft clipped
 
-                    if not alt_allele and base_pair_descriptor.is_soft_clipped:
+                    if not alt_allele and alignment_sequence_base_descriptor.is_soft_clipped:
                         soft_clipped_aligned_segment_names += [aligned_segment_name]
                         continue
 
@@ -223,14 +225,15 @@ class PileupReadKnapsack(object):
                     num_alt_thymine += 1 if alt_allele == "T" else 0
 
                     # alt_allele is either an insertion or a deletion
-                    num_ins += 1 if not alt_allele and base_pair_descriptor.is_ins else 0
-                    num_del += 1 if not alt_allele and base_pair_descriptor.is_del else 0
+                    num_ins += 1 if not alt_allele and alignment_sequence_base_descriptor.is_ins else 0
+                    num_del += 1 if not alt_allele and alignment_sequence_base_descriptor.is_del else 0
 
             if len(soft_clipped_aligned_segment_names) > 0:  # change in read is next to a soft clip
                 for soft_clipped_aligned_segment_name in soft_clipped_aligned_segment_names:
                     pileupread = pileupreads[soft_clipped_aligned_segment_name]
-                    soft_clipped_region_length = BasePairUtils.determine_soft_clipped_region_length(position=start,
-                                                        aligned_segment=pileupread.aligned_segment)
+                    soft_clipped_region_length = \
+                        BasePairUtils.determine_soft_clipped_region_length(position=start,
+                                                                           aligned_segment=pileupread.aligned_segment)
                     if soft_clipped_region_length == 1:  # assigned to the dominant transformation
                         pass
                     else:  # assign to dominant ins/del
@@ -242,18 +245,18 @@ class PileupReadKnapsack(object):
                     # num_alt_thymine += 1 if alt_allele == "T" else 0
                     #
                     # # alt_allele is either an insertion or a deletion
-                    # num_ins += 1 if not alt_allele and base_pair_descriptor.is_ins else 0
-                    # num_del += 1 if not alt_allele and base_pair_descriptor.is_del else 0
+                    # num_ins += 1 if not alt_allele and alignment_sequence_base_descriptor.is_ins else 0
+                    # num_del += 1 if not alt_allele and alignment_sequence_base_descriptor.is_del else 0
 
                 #BasePairUtils.determine_soft_clipped_region_length(pos)
 
-            # for aligned_segment_name in base_pair_descriptors:
-            #     base_pair_descriptor = base_pair_descriptors[aligned_segment_name]
-            #     if base_pair_descriptor.is_soft_clipped and aligned_segment_name in pileupreads:
+            # for aligned_segment_name in alignment_sequence_base_descriptors:
+            #     alignment_sequence_base_descriptor = alignment_sequence_base_descriptors[aligned_segment_name]
+            #     if alignment_sequence_base_descriptor.is_soft_clipped and aligned_segment_name in pileupreads:
             #         pileupread = pileupreads[aligned_segment_name]
             #
             #
-            #         num_soft_clipped += 1 if base_pair_descriptor.is_soft_clipped else 0
+            #         num_soft_clipped += 1 if alignment_sequence_base_descriptor.is_soft_clipped else 0
 
             return PileupReadKnapsack.BasePairAggregateCounts(num_ref=num_ref, num_alt=num_alt, num_ins=num_ins,
                                                                 num_del=num_del, num_soft_clipped=num_soft_clipped)

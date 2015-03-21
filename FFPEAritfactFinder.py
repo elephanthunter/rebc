@@ -5,7 +5,7 @@ from pysam import AlignmentFile
 from pysam import FastaFile
 import pandas
 import math
-from BasePairMask import BasePairMask
+from PileupColumnMask import PileupColumnMask
 from collections import OrderedDict
 from BasePairUtils import BasePairUtils
 from ArtifactContingencyTableAnalysis import ArtifactContingencyTableAnalysis
@@ -121,6 +121,8 @@ def main():
 
 def retrieve_mutational_features(mutations_dataframe, case_sample_bam_filename, control_sample_bam_filename,
                                  ref_seq_filename):
+
+    # works for SNPs only
     case_sample_bam_file = AlignmentFile(case_sample_bam_filename, "rb")
     control_sample_bam_file = AlignmentFile(control_sample_bam_filename, "rb")
     ref_seq_file = FastaFile(ref_seq_filename)
@@ -134,21 +136,22 @@ def retrieve_mutational_features(mutations_dataframe, case_sample_bam_filename, 
         alt_allele = mutation_row["Tumor_Seq_Allele2"]
 
         # Gather data for cases
-        case_pileupread_knapsack = PileupReadKnapsack.create(chrom, start, end, case_sample_bam_file, ref_seq_file)
-        case_base_pair_mask = BasePairMask.create(case_pileupread_knapsack)
+        case_pileupcolumn_knapsack = PileupColumnKnapsack.create(chrom, start, end, case_sample_bam_file, ref_seq_file)
+        case_pileupcolumn_mask = PileupColumnMask.create(case_pileupcolumn_knapsack)
 
         # Gather data for controls
-        control_pileupread_knapsack = PileupReadKnapsack.create(chrom, start, end, control_sample_bam_file,
-                                                                ref_seq_file)
-        control_base_pair_mask = BasePairMask.create(control_pileupread_knapsack)
+        control_pileupcolumn_knapsack = PileupColumnKnapsack.create(chrom, start, end, control_sample_bam_file,
+                                                                    ref_seq_file)
+        control_pileupcolumn_mask = PileupColumnMask.create(control_pileupcolumn_knapsack)
 
         # Determine what positions to mask
-        binary_position_names_mask = BasePairUtils.intersect_base_pair_masks(case_base_pair_mask, control_base_pair_mask)
+        pileupcolumn_names_mask = \
+            BasePairUtils.intersect_pileupcolumn_masks(case_pileupcolumn_mask, control_pileupcolumn_mask)
 
-        case_contingency_table = \
-            ArtifactContingencyTableAnalysis.create(chrom, start, end, ref_allele, alt_allele, case_pileupread_knapsack,
-                                                    binary_position_names_mask=binary_position_names_mask,
-                                                    ref_seq_file=ref_seq_file)
+        # case_contingency_table = \
+        #     ArtifactContingencyTableAnalysis.create(chrom, start, end, ref_allele, alt_allele, case_pileupread_knapsack,
+        #                                             binary_position_names_mask=binary_position_names_mask,
+        #                                             ref_seq_file=ref_seq_file)
         # control_contingency_table = \
         #     ArtifactContingencyTableAnalysis.create(chrom=chrom, start=start, end=end, ref_allele=ref_allele,
         #                                             alt_allele=alt_allele, bam_file=control_sample_bam_file,

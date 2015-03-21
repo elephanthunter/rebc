@@ -25,6 +25,12 @@ class PileupColumnKnapsack():
                 pileupread = pileupreads[alignment_query_name]
         return pileupread
 
+    def retrieve_ref_allele(self, pileupcolumn_name):
+        ref_allele = None
+        if pileupcolumn_name in self._pileupread_knapsacks:
+            ref_allele = self._pileupread_knapsacks[pileupcolumn_name].ref_allele
+        return ref_allele
+
     @classmethod
     def create(cls, chrom, start, end, sample_bam_file, ref_seq_file):
         pileupread_knapsacks = OrderedDict()
@@ -37,7 +43,7 @@ class PileupColumnKnapsack():
             pileupcolumn_name = BasePairUtils.retrieve_pileupcolumn_name(pileupcolumn_chrom, pileupcolumn_start,
                                                                          pileupcolumn_end)
             if pileupcolumn.pos != start:
-                ref_allele = ref_seq_file.fetch(chrom, pileupcolumn_start, pileupcolumn_end)  # [start,end) region is called
+                ref_allele = ref_seq_file.fetch(chrom, pileupcolumn_start, pileupcolumn_end)  # [start,end) region
                 pileupread_knapsacks[pileupcolumn_name] = \
                     PileupReadKnapsack.create(pileupcolumn_chrom, pileupcolumn_start, pileupcolumn_end, ref_allele,
                                               pileupcolumn)
