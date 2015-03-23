@@ -148,10 +148,11 @@ def retrieve_mutational_features(mutations_dataframe, case_sample_bam_filename, 
         pileupcolumn_names_mask = \
             BasePairUtils.intersect_pileupcolumn_masks(case_pileupcolumn_mask, control_pileupcolumn_mask)
 
-        # case_contingency_table = \
-        #     ArtifactContingencyTableAnalysis.create(chrom, start, end, ref_allele, alt_allele, case_pileupread_knapsack,
-        #                                             binary_position_names_mask=binary_position_names_mask,
-        #                                             ref_seq_file=ref_seq_file)
+        for pileupcolumn in case_sample_bam_file.pileup(chrom, start, end, truncate=True):
+            case_contingency_table = ArtifactContingencyTableAnalysis.create(ref_allele, alt_allele, pileupcolumn,
+                                                                             case_pileupcolumn_knapsack,
+                                                                             pileupcolumn_names_mask)
+
         # control_contingency_table = \
         #     ArtifactContingencyTableAnalysis.create(chrom=chrom, start=start, end=end, ref_allele=ref_allele,
         #                                             alt_allele=alt_allele, bam_file=control_sample_bam_file,

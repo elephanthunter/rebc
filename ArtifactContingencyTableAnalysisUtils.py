@@ -23,26 +23,31 @@ class ArtifactContingencyTableAnalysisUtils():
                     (pileupread.alignment.query_sequence[pileupread.query_position] == ref_allele))
 
     @staticmethod
-    def retrieve_non_ref_length(pileupread, ref_allele, binarize_length=True):
+    def _retrieve_non_ref_length(pileupread, ref_allele, binarize_length=True):
         # TODO: investigate cases where the SNP lies at beginning of an insertion (what happens then?)
-        if binarize_length:
-            if not pileupread.is_del and pileupread.indel != 0:  # base before the deletion/insertion
-                length = 1
-            elif pileupread.is_del:
-                length = 0
+        length = 0
+        if not pileupread.is_del and pileupread.indel > 0:
+            if binarize_length:
+                length += 1  # for the subsequent insertion
             else:
-                length = int(pileupread.alignment.query_sequence[pileupread.query_position] != ref_allele)
-        else:  # lengths are not binarized
-            if not pileupread.is_del and pileupread.indel != 0:
-                length = int(math.fabs(pileupread.indel))
-            elif pileupread.is_del:
-                length = 0
+                length += int(pileupread.indel)
+            if pileupread.alignment.query_sequence[pileupread.query_position] != ref_allele:  # for a SNP
+                length += 1  # for a SNP
+        elif not pileupread.is_del and pileupread.indel < 0:
+            if binarize_length:
+                length += 1  # for the subsequent deletion
             else:
-                length = int(pileupread.alignment.query_sequence[pileupread.query_position] != ref_allele)
+                length += int(math.fabs(pileupread.indel))
+            if pileupread.alignment.query_sequence[pileupread.query_position] != ref_allele:
+                length += 1  # for a SNP
+        elif not pileupread.is_del:
+            if pileupread.alignment.query_sequence[pileupread.query_position] != ref_allele:
+                length += 1  # for a SNP
         return length
 
     @staticmethod
     def retrieve_soft_clipped_pileupread_bp_count(indexed_pileupreads):
+        # TODO: not yet implemented
         count = 0
         for indexed_pileupread in indexed_pileupreads:
             count += 1
@@ -63,6 +68,15 @@ class ArtifactContingencyTableAnalysisUtils():
         return indexed_pileupreads
 
     @staticmethod
+    def retrieve_ref_alleles(pileupcolumn_knapsack):
+        ref_alleles = OrderedDict()
+        for pileupcolumn_name in pileupcolumn_knapsack.pileupcolumn_names:
+            ref_allele = pileupcolumn_knapsack.retrieve_ref_allele(pileupcolumn_name)
+            if ref_allele:
+                ref_alleles[pileupcolumn_name] = ref_allele
+        return ref_alleles
+
+    @staticmethod
     def retrieve_ref_bp_count(indexed_pileupreads, ref_alleles):
         count = 0
         for index in indexed_pileupreads:  # iterate over columns
@@ -80,5 +94,7 @@ class ArtifactContingencyTableAnalysisUtils():
             ref_allele = ref_alleles[index]
             pileupreads = indexed_pileupreads[index]
             for pileupread in pileupreads:  # iterate over rows
-                count += ArtifactContingencyTableAnalysisUtils.retrieve_non_ref_length(pileupread, ref_allele)
+                count += ArtifactContingencyTableAnalysisUtils._retrieve_non_ref_length(pileupread, ref_allele,
+                                                                                        binarize_length=True)
+                # if the next is deletion and not indexed then don't call length (next iteration)
         return count

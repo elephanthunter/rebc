@@ -1,6 +1,7 @@
 import math
 import pandas
 from ArtifactContingencyTableAnalysisUtils import ArtifactContingencyTableAnalysisUtils
+from collections import OrderedDict
 
 
 class ArtifactContingencyTableAnalysis(object):
@@ -207,15 +208,62 @@ class ArtifactContingencyTableAnalysis(object):
         ref_overlapping_aligned_segment_count = 0
         alt_overlapping_aligned_segment_count = 0
 
-        # ref_alleles = ArtifactContingencyTableAnalysisUtils.retrieve_ref_alleles(chrom=chrom, start=start, end=end,
-        #                                                                          refseqfile=ref_seq_file)
+        pileupreads = OrderedDict()
+        ref_supporting_pileupread_alignment_query_name = []
+        alt_supporting_pileupread_alignment_query_name = []
 
-        aligned_segment_names = set()
+        ref_alleles = ArtifactContingencyTableAnalysisUtils.retrieve_ref_alleles(pileupcolumn_knapsack)
+        num_reads = 0
+        num_ref_supporting_reads = 0
+        num_alt_supporting_reads = 0
 
         for pileupread in pileupcolumn.pileups:
+            num_reads += 1
+            pileupread_alignment_query_name = pileupread.alignment.query_name
             is_indel = ArtifactContingencyTableAnalysisUtils.pileupread_has_indel(pileupread)  # not used
             is_ref = ArtifactContingencyTableAnalysisUtils.pileupread_has_ref_allele(pileupread, ref_allele)
             is_alt = ArtifactContingencyTableAnalysisUtils.pileupread_has_alt_allele(pileupread, alt_allele)
+
+            print "%s:%s:%s:%s:%s:%s:%s" % \
+                  (pileupread.alignment.query_name, num_reads, ref_allele, alt_allele, is_indel, is_ref,
+                   is_alt)
+            if pileupread_alignment_query_name in pileupreads:
+                # is the read in the ref bag, alt bag, or neither?
+                if not is_indel and is_ref and not is_alt:
+                    ref_overlapping_aligned_segment_count += 1
+                elif not is_indel and not is_ref and is_alt:
+                    alt_overlapping_aligned_segment_count += 1
+                else:  # indel based pivots and non-biallelic leftovers
+                    pass
+            else:
+                pileupreads[pileupread_alignment_query_name] = pileupread
+                # is the read in the ref bag, alt bag, or neither?
+                if not is_indel and is_ref and not is_alt:  # ref supporting
+                    ref_supporting_pileupread_alignment_query_name += [pileupread_alignment_query_name]
+                    num_ref_supporting_reads += 1
+                elif not is_indel and not is_ref and is_alt:  # alt supporting
+                    alt_supporting_pileupread_alignment_query_name += [pileupread_alignment_query_name]
+                    num_alt_supporting_reads += 1
+                else:  # indel based pivots and non-biallelic leftovers
+                    pass
+
+        # indexed_pileupreads = \
+        #     ArtifactContingencyTableAnalysisUtils.retrieve_indexed_pileupreads(pileupcolumn_knapsack,
+        #                                                                        pileupreads.keys(), pileupcolumn_mask)
+        #
+        # ref_supporting_indexed_pileupreads = OrderedDict()
+        # # for
+        # # ref supporting counts
+        # ref_ref_pileupread_bp_count = \
+        #         ArtifactContingencyTableAnalysisUtils.retrieve_ref_bp_count()
+        # ref_non_ref_pileupread_bp_count = \
+        #     ArtifactContingencyTableAnalysisUtils.retrieve_non_ref_bp_count()
+        #
+        # # alt supporting counts
+        # alt_ref_pileupread_bp_count = \
+        #         ArtifactContingencyTableAnalysisUtils.retrieve_ref_bp_count()
+        # ref_non_ref_pileupread_bp_count = \
+        #     ArtifactContingencyTableAnalysisUtils.retrieve_non_ref_bp_count()
 
                     # print "%s:%s:%s:%s:%s:%s:%s:%s" % \
                     #       (pileupread.alignment.query_name, chrom, start, ref_allele, alt_allele, is_indel, is_ref,
