@@ -159,7 +159,6 @@ def retrieve_mutational_features(mutations_dataframe, case_sample_bam_filename, 
         #                                             binarized_position_names_mask=binarized_position_names_mask,
         #                                             ref_seq_file=ref_seq_file)
 
-
     case_sample_bam_file.close()
     control_sample_bam_file.close()
     ref_seq_file.close()

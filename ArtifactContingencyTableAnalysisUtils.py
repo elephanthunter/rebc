@@ -54,8 +54,7 @@ class ArtifactContingencyTableAnalysisUtils():
         return count
 
     @staticmethod
-    def retrieve_indexed_pileupreads(pileupcolumn_knapsack, pileupread_alignment_query_names,
-                                     pileupcolumn_mask):
+    def retrieve_indexed_pileupreads(pileupcolumn_knapsack, pileupread_alignment_query_names, pileupcolumn_mask):
         indexed_pileupreads = OrderedDict()
         for pileupcolumn_name in pileupcolumn_knapsack.pileupcolumn_names:
             if not pileupcolumn_mask[pileupcolumn_name]:  # pileupcolumn is not masked
@@ -63,7 +62,7 @@ class ArtifactContingencyTableAnalysisUtils():
                 for pileupread_alignment_query_name in pileupread_alignment_query_names:
                     pileupread = pileupcolumn_knapsack.retrieve_pileupread(pileupcolumn_name,
                                                                            pileupread_alignment_query_name)
-                    if not pileupread:
+                    if pileupread:
                         indexed_pileupreads[pileupcolumn_name] += [pileupread]
         return indexed_pileupreads
 
@@ -77,24 +76,32 @@ class ArtifactContingencyTableAnalysisUtils():
         return ref_alleles
 
     @staticmethod
-    def retrieve_ref_bp_count(indexed_pileupreads, ref_alleles):
+    def retrieve_ref_bp_count(indexed_pileupreads, ref_alleles, pileupread_alignment_query_names=None):
+        pileupread_alignment_query_names = [] if not pileupread_alignment_query_names else \
+            pileupread_alignment_query_names
         count = 0
-        for index in indexed_pileupreads:  # iterate over columns
-            ref_allele = ref_alleles[index]
-            pileupreads = indexed_pileupreads[index]
+        for pileupcolumn_name in indexed_pileupreads:  # iterate over columns
+            ref_allele = ref_alleles[pileupcolumn_name]
+            pileupreads = indexed_pileupreads[pileupcolumn_name]
             for pileupread in pileupreads:  # iterate over rows
-                if ArtifactContingencyTableAnalysisUtils.pileupread_has_ref_allele(pileupread, ref_allele):
+                if pileupread.alignment.query_name in pileupread_alignment_query_names and \
+                        ArtifactContingencyTableAnalysisUtils.pileupread_has_ref_allele(pileupread, ref_allele):
+                    # print "A%s:%s:%s" % (pileupread.alignment.query_name, pileupread.alignment.cigarstring,
+                    #                      pileupread.alignment.get_tag("NM"))
                     count += 1
         return count
 
-    @staticmethod
-    def retrieve_non_ref_bp_count(indexed_pileupreads, ref_alleles):  # does not include soft clip counts
+    @staticmethod  # does not include soft clipped counts
+    def retrieve_non_ref_bp_count(indexed_pileupreads, ref_alleles, pileupread_alignment_query_names=None):
+        pileupread_alignment_query_names = [] if not pileupread_alignment_query_names else \
+            pileupread_alignment_query_names
         count = 0
-        for index in indexed_pileupreads:  # iterate over columns
-            ref_allele = ref_alleles[index]
-            pileupreads = indexed_pileupreads[index]
+        for pileupcolumn_name in indexed_pileupreads:  # iterate over columns
+            ref_allele = ref_alleles[pileupcolumn_name]
+            pileupreads = indexed_pileupreads[pileupcolumn_name]
             for pileupread in pileupreads:  # iterate over rows
-                count += ArtifactContingencyTableAnalysisUtils._retrieve_non_ref_length(pileupread, ref_allele,
-                                                                                        binarize_length=True)
-                # if the next is deletion and not indexed then don't call length (next iteration)
+                if pileupread.alignment.query_name in pileupread_alignment_query_names:
+                    count += ArtifactContingencyTableAnalysisUtils._retrieve_non_ref_length(pileupread, ref_allele,
+                                                                                            binarize_length=True)
+                # if the next is deletion and not indexed then don't call length (next iteration of code)
         return count
