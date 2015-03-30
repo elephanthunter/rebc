@@ -56,6 +56,15 @@ class PileupReadKnapsack(object):
             pileupreads[pileupread.alignment.query_name] = pileupread
         return PileupReadKnapsack(chrom=chrom, start=start, end=end, ref_allele=ref_allele, pileupreads=pileupreads)
 
+
+
+
+
+
+
+
+
+
     class AlignmentSequenceBaseDescriptor(object):
         def __init__(self, ref_allele, alt_allele, is_ref, is_alt, is_ins, is_del, is_soft_clipped):
             self._ref_allele = ref_allele

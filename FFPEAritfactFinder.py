@@ -8,7 +8,8 @@ import math
 from PileupColumnMask import PileupColumnMask
 from collections import OrderedDict
 from BasePairUtils import BasePairUtils
-from ArtifactContingencyTableAnalysis import ArtifactContingencyTableAnalysis
+from ArtifactAnalysisTable import ArtifactAnalysisTable
+from ArtifactAnalysisTable import ArtifactAnalysisTableUtils
 from PileupReadKnapsack import PileupReadKnapsack
 from PileupColumnKnapsack import PileupColumnKnapsack
 
@@ -149,15 +150,37 @@ def retrieve_mutational_features(mutations_dataframe, case_sample_bam_filename, 
             BasePairUtils.intersect_pileupcolumn_masks(case_pileupcolumn_mask, control_pileupcolumn_mask)
 
         for pileupcolumn in case_sample_bam_file.pileup(chrom, start, end, truncate=True):
-            case_contingency_table = ArtifactContingencyTableAnalysis.create(ref_allele, alt_allele, pileupcolumn,
-                                                                             case_pileupcolumn_knapsack,
-                                                                             pileupcolumn_names_mask)
+            case_data_table = ArtifactAnalysisTable.create(ref_allele, alt_allele, pileupcolumn,
+                                                           case_pileupcolumn_knapsack, pileupcolumn_names_mask)
 
-        # control_contingency_table = \
-        #     ArtifactContingencyTableAnalysis.create(chrom=chrom, start=start, end=end, ref_allele=ref_allele,
-        #                                             alt_allele=alt_allele, bam_file=control_sample_bam_file,
-        #                                             binarized_position_names_mask=binarized_position_names_mask,
-        #                                             ref_seq_file=ref_seq_file)
+            case_contingency_table = ArtifactAnalysisTableUtils.render_contingency_table(dataTable=case_data_table)
+            _, two_sided_pvalue = scipy.stats.fisher_exact(case_contingency_table, alternative="two-sided")
+            _, greater_pvalue = scipy.stats.fisher_exact(case_contingency_table, alternative="greater")
+
+            soft_clipped_case_contingency_table = \
+                ArtifactAnalysisTableUtils.render_soft_clipped_contingency_table(dataTable=case_data_table)
+            _, two_sided_soft_clipped_pvalue = \
+                scipy.stats.fisher_exact(soft_clipped_case_contingency_table, alternative="two-sided")
+            _, greater_soft_clipped_pvalue = \
+                scipy.stats.fisher_exact(soft_clipped_case_contingency_table, alternative="greater")
+            break
+
+        for pileupcolumn in control_sample_bam_file.pileup(chrom, start, end, truncate=True):
+            control_data_table = ArtifactAnalysisTable.create(ref_allele, alt_allele, pileupcolumn,
+                                                              control_pileupcolumn_knapsack, pileupcolumn_names_mask)
+            control_contingency_table = \
+                ArtifactAnalysisTableUtils.render_contingency_table(dataTable=control_data_table)
+            _, two_sided_pvalue = scipy.stats.fisher_exact(control_contingency_table, alternative="two-sided")
+            _, greater_pvalue = scipy.stats.fisher_exact(control_contingency_table, alternative="greater")
+
+            soft_clipped_control_contingency_table = \
+                ArtifactAnalysisTableUtils.render_soft_clipped_contingency_table(dataTable=control_data_table)
+            _, two_sided_soft_clipped_pvalue = \
+                scipy.stats.fisher_exact(soft_clipped_control_contingency_table, alternative="two-sided")
+            _, greater_soft_clipped_pvalue = \
+                scipy.stats.fisher_exact(soft_clipped_control_contingency_table, alternative="greater")
+            break
+
 
     case_sample_bam_file.close()
     control_sample_bam_file.close()
