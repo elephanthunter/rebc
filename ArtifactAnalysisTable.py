@@ -188,10 +188,9 @@ class ArtifactAnalysisTable(object):
                 pass  # do nothing
 
         # TODO: what happens when the read is ref supporting but it's mate is alt supporting?
-        indexed_pileupreads = \
-            ArtifactAnalysisTableUtils.retrieve_indexed_pileupreads(pileupcolumn_knapsack,
-                                                                    pileupread_alignment_query_names,
-                                                                    pileupcolumn_mask)
+        indexed_pileupreads = ArtifactAnalysisTableUtils.retrieve_indexed_pileupreads(pileupcolumn_knapsack,
+                                                                                      pileupread_alignment_query_names,
+                                                                                      pileupcolumn_mask)
 
         # ref supporting counts
         ref_ref_pileupread_bp_count = \

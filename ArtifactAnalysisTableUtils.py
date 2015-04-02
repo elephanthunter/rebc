@@ -50,7 +50,8 @@ class ArtifactAnalysisTableUtils():
     def retrieve_indexed_pileupreads(pileupcolumn_knapsack, pileupread_alignment_query_names, pileupcolumn_mask):
         indexed_pileupreads = OrderedDict()
         for pileupcolumn_name in pileupcolumn_knapsack.pileupcolumn_names:
-            if not pileupcolumn_mask[pileupcolumn_name]:  # pileupcolumn is not masked
+            if pileupcolumn_name in pileupcolumn_mask and \
+                    not pileupcolumn_mask[pileupcolumn_name]:  # pileupcolumn is not masked
                 indexed_pileupreads[pileupcolumn_name] = []
                 for pileupread_alignment_query_name in pileupread_alignment_query_names:
                     pileupread = pileupcolumn_knapsack.retrieve_pileupread(pileupcolumn_name,

@@ -5,6 +5,8 @@ from pysam import AlignmentFile
 from pysam import FastaFile
 import pandas
 import math
+import sys
+import time
 from PileupColumnMask import PileupColumnMask
 from collections import OrderedDict
 from BasePairUtils import BasePairUtils
@@ -129,6 +131,8 @@ def retrieve_mutational_features(mutations_dataframe, case_sample_bam_filename, 
     ref_seq_file = FastaFile(ref_seq_filename)
 
     for index, mutation_row in mutations_dataframe.iterrows():
+        t0 = time.time()
+
         chrom = str(mutation_row["Chromosome"])
         start = mutation_row["Start_position"] - 1  # subtracted to account for zero based indexing when using pysam
         end = mutation_row["End_position"]
@@ -144,27 +148,36 @@ def retrieve_mutational_features(mutations_dataframe, case_sample_bam_filename, 
         control_pileupcolumn_knapsack = PileupColumnKnapsack.create(chrom, start, end, control_sample_bam_file,
                                                                     ref_seq_file)
         control_pileupcolumn_mask = PileupColumnMask.create(control_pileupcolumn_knapsack)
+        #
+        # print len(case_pileupcolumn_mask.mask), case_pileupcolumn_mask.mask.keys()[0], \
+        #     case_pileupcolumn_mask.mask.keys()[-1]
+        # print len(control_pileupcolumn_mask.mask), control_pileupcolumn_mask.mask.keys()[0], \
+        #     control_pileupcolumn_mask.mask.keys()[-1]
 
         # Determine what positions to mask
         pileupcolumn_names_mask = \
             BasePairUtils.intersect_pileupcolumn_masks(case_pileupcolumn_mask, control_pileupcolumn_mask)
 
         for pileupcolumn in case_sample_bam_file.pileup(chrom, start, end, truncate=True):
+            # print len(pileupcolumn_names_mask), pileupcolumn_names_mask.keys()[0], pileupcolumn_names_mask.keys()[-1]
             case_data_table = ArtifactAnalysisTable.create(ref_allele, alt_allele, pileupcolumn,
                                                            case_pileupcolumn_knapsack, pileupcolumn_names_mask)
-
+            # print "-----------------------------------------------"
             case_contingency_table = ArtifactAnalysisTableUtils.render_contingency_table(dataTable=case_data_table)
+            # #ArtifactAnalysisTableUtils.retrieve_table_as_series(dataTable=case_data_table, prefix="case_")
+            #
             _, two_sided_pvalue = scipy.stats.fisher_exact(case_contingency_table, alternative="two-sided")
             _, greater_pvalue = scipy.stats.fisher_exact(case_contingency_table, alternative="greater")
 
             soft_clipped_case_contingency_table = \
                 ArtifactAnalysisTableUtils.render_soft_clipped_contingency_table(dataTable=case_data_table)
-            _, two_sided_soft_clipped_pvalue = \
-                scipy.stats.fisher_exact(soft_clipped_case_contingency_table, alternative="two-sided")
-            _, greater_soft_clipped_pvalue = \
-                scipy.stats.fisher_exact(soft_clipped_case_contingency_table, alternative="greater")
+            _, two_sided_soft_clipped_pvalue = scipy.stats.fisher_exact(soft_clipped_case_contingency_table,
+                                                                        alternative="two-sided")
+            _, greater_soft_clipped_pvalue = scipy.stats.fisher_exact(soft_clipped_case_contingency_table,
+                                                                      alternative="greater")
             break
 
+        control_sample_bam_file = AlignmentFile(control_sample_bam_filename, "rb")
         for pileupcolumn in control_sample_bam_file.pileup(chrom, start, end, truncate=True):
             control_data_table = ArtifactAnalysisTable.create(ref_allele, alt_allele, pileupcolumn,
                                                               control_pileupcolumn_knapsack, pileupcolumn_names_mask)
@@ -175,12 +188,14 @@ def retrieve_mutational_features(mutations_dataframe, case_sample_bam_filename, 
 
             soft_clipped_control_contingency_table = \
                 ArtifactAnalysisTableUtils.render_soft_clipped_contingency_table(dataTable=control_data_table)
-            _, two_sided_soft_clipped_pvalue = \
-                scipy.stats.fisher_exact(soft_clipped_control_contingency_table, alternative="two-sided")
-            _, greater_soft_clipped_pvalue = \
-                scipy.stats.fisher_exact(soft_clipped_control_contingency_table, alternative="greater")
+            _, two_sided_soft_clipped_pvalue = scipy.stats.fisher_exact(soft_clipped_control_contingency_table,
+                                                                        alternative="two-sided")
+            _, greater_soft_clipped_pvalue = scipy.stats.fisher_exact(soft_clipped_control_contingency_table,
+                                                                      alternative="greater")
             break
+        t1 = time.time()
 
+        sys.stdout.write("%s\n" % (t1-t0))
 
     case_sample_bam_file.close()
     control_sample_bam_file.close()
