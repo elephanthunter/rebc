@@ -149,6 +149,7 @@ class ArtifactAnalysisTable(object):
         return self._ref_ref_soft_clipped_pileupread_bp_count
 
     @classmethod
+    #@profile
     def create(cls, ref_allele, alt_allele, pileupcolumn, pileupcolumn_knapsack, pileupcolumn_mask=None):
         ref_overlapping_aligned_segment_count = 0
         alt_overlapping_aligned_segment_count = 0
@@ -159,6 +160,11 @@ class ArtifactAnalysisTable(object):
 
         ref_alleles = ArtifactAnalysisTableUtils.retrieve_ref_alleles(pileupcolumn_knapsack)
         for pileupread in pileupcolumn.pileups:
+
+            # Quality check: use arbitrary threshold of 90% to decide whether to discard the read or not
+            if not ArtifactAnalysisTableUtils.pileupread_passes_quality_control(pileupread):
+                continue
+
             pileupread_alignment_query_name = pileupread.alignment.query_name
 
             is_indel = ArtifactAnalysisTableUtils.pileupread_has_indel(pileupread)  # not used
@@ -193,6 +199,7 @@ class ArtifactAnalysisTable(object):
                                                                                       pileupcolumn_mask)
 
         # ref supporting counts
+        ref_supporting_pileupread_alignment_query_names = set(ref_supporting_pileupread_alignment_query_names)
         ref_ref_pileupread_bp_count = \
             ArtifactAnalysisTableUtils.retrieve_ref_bp_count(indexed_pileupreads, ref_alleles,
                 ref_supporting_pileupread_alignment_query_names)
@@ -204,6 +211,7 @@ class ArtifactAnalysisTable(object):
                 ref_supporting_pileupread_alignment_query_names)
 
         # alt supporting counts
+        alt_supporting_pileupread_alignment_query_names = set(alt_supporting_pileupread_alignment_query_names)
         alt_ref_pileupread_bp_count = \
             ArtifactAnalysisTableUtils.retrieve_ref_bp_count(indexed_pileupreads, ref_alleles,
                 alt_supporting_pileupread_alignment_query_names)
