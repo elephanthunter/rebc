@@ -30,22 +30,25 @@ class ArtifactAnalysisTableUtils():
     @staticmethod
     def _retrieve_non_ref_length(pileupread, ref_allele, binarize_indel_length=True):
         length = 0
-        if not pileupread.is_del and pileupread.indel > 0:
+        if not pileupread.is_del and pileupread.indel > 0:  # insertion
             if binarize_indel_length:
                 length += 1  # for the subsequent insertion
             else:
                 length += int(pileupread.indel)
-            if pileupread.alignment.query_sequence[pileupread.query_position] != ref_allele:
+            if pileupread.alignment.query_sequence[pileupread.query_position] != ref_allele \
+                    and pileupread.alignment.query_sequence[pileupread.query_position] != "N":
                 length += 1  # for a SNP (adds 1 for the SNP in front of an insertion)
-        elif not pileupread.is_del and pileupread.indel < 0:
+        elif not pileupread.is_del and pileupread.indel < 0:  # deletion
             if binarize_indel_length:
                 length += 1  # for the subsequent deletion
             else:
                 length += int(math.fabs(pileupread.indel))
-            if pileupread.alignment.query_sequence[pileupread.query_position] != ref_allele:
+            if pileupread.alignment.query_sequence[pileupread.query_position] != ref_allele \
+                    and pileupread.alignment.query_sequence[pileupread.query_position] != "N":
                 length += 1  # for a SNP (adds 1 for the SNP in front of a deletion)
         elif not pileupread.is_del:
-            if pileupread.alignment.query_sequence[pileupread.query_position] != ref_allele:
+            if pileupread.alignment.query_sequence[pileupread.query_position] != ref_allele \
+                    and pileupread.alignment.query_sequence[pileupread.query_position] != "N":
                 length += 1  # for a SNP
         return length
 
@@ -83,7 +86,7 @@ class ArtifactAnalysisTableUtils():
                     count -= cigartuple[1]
                 elif cigartuple[0] == ArtifactAnalysisTableUtils.BAM_CDEL:  # remove del
                     count -= cigartuple[1]
-            if count/pileupread.alignment.query_length > .1:
+            if count/pileupread.alignment.query_alignment_length > .1:
                 return False
         except ValueError:
             pass
@@ -105,16 +108,14 @@ class ArtifactAnalysisTableUtils():
 
     @staticmethod  # does not include soft clipped counts
     #@profile
-    def retrieve_non_ref_bp_count(indexed_pileupreads, ref_alleles, pileupread_alignment_query_names,
-                                  binarize_indel_length=True):
+    def retrieve_non_ref_bp_count(indexed_pileupreads, ref_alleles, pileupread_alignment_query_names):
         count = 0
         for pileupcolumn_name in indexed_pileupreads:  # iterate over columns
             ref_allele = ref_alleles[pileupcolumn_name]
             pileupreads = indexed_pileupreads[pileupcolumn_name]
             for pileupread in pileupreads:  # iterate over rows
                 if pileupread.alignment.query_name in pileupread_alignment_query_names:
-                    count += ArtifactAnalysisTableUtils._retrieve_non_ref_length(pileupread, ref_allele,
-                                                                                 binarize_indel_length)
+                    count += ArtifactAnalysisTableUtils._retrieve_non_ref_length(pileupread, ref_allele)
         return count
 
     @staticmethod
@@ -133,11 +134,14 @@ class ArtifactAnalysisTableUtils():
     def retrieve_soft_clipped_bp_count(indexed_pileupreads, pileupread_alignment_query_names,
                                        binarize_indel_length=True):
         count = 0
+        counted_pileupread_alignment_query_names = set()
         for pileupcolumn_name in indexed_pileupreads:  # iterate over columns
             pileupreads = indexed_pileupreads[pileupcolumn_name]
             for pileupread in pileupreads:  # iterate over rows
-                if pileupread.alignment.query_name in pileupread_alignment_query_names:
+                if pileupread.alignment.query_name in pileupread_alignment_query_names \
+                        and pileupread.alignment.query_name not in counted_pileupread_alignment_query_names:
                     count += ArtifactAnalysisTableUtils._retrieve_soft_clipped_length(pileupread, binarize_indel_length)
+                    counted_pileupread_alignment_query_names.add(pileupread.alignment.query_name)
         return count
 
     @staticmethod

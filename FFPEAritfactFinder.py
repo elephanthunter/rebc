@@ -30,7 +30,7 @@ VALID_CHROMOSOMES = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "1
                      "chr20", "chr21", "chr22", "chrX", "chrY"]
 
 
-def main():
+def parseOptions():
     parser = argparse.ArgumentParser(description="", epilog="")
     parser.add_argument("--input_maf_filename", dest="input_maf_filename", action="store", required=True,
                         help="Input MAF filename.")
@@ -47,8 +47,12 @@ def main():
                         required=True, help="Name of the output MAF filename.")
 
     # TODO: add option for both germline and somatic mask, etc.
-
     args, _ = parser.parse_known_args()
+    return args
+
+
+def main():
+    args = parseOptions()
     somatic_mutations_dataframe = pandas.read_csv(args.input_maf_filename, sep="\t", header=0, comment="#",
                                                   usecols=["Chromosome", "Start_position", "End_position",
                                                            "Reference_Allele", "Tumor_Seq_Allele2", "Variant_Type",
@@ -61,6 +65,7 @@ def main():
                                                          "Matched_Norm_Sample_Barcode": numpy.str,
                                                          "Variant_Classification": numpy.str}, low_memory=False)
 
+    # TODO: issue is that the nearby mutations would be thrown away that are eventually used in masking
     criteria = (somatic_mutations_dataframe["Variant_Type"].isin(["SNP"])) & \
                (somatic_mutations_dataframe["Variant_Classification"].isin(CODING_VARIANT_CLASSIFICATION)) & \
                (somatic_mutations_dataframe["Chromosome"].isin(VALID_CHROMOSOMES))
@@ -72,7 +77,7 @@ def main():
     if (not args.case_sample_bam_filename or not args.control_sample_bam_filename) \
             and args.sample_bam_filename is not None:
         samples = pandas.read_csv(args.sample_bam_filename, sep="\t")
-        samples = samples[["sample_id", "clean_bam_file_capture"]]  # subset
+        samples = samples[["sample_id", "clean_bam_file_capture"]]  # TODO: expand to not just capture data
         somatic_mutations_dataframe = \
             somatic_mutations_dataframe[(somatic_mutations_dataframe["Tumor_Sample_Barcode"].isin(samples["sample_id"]))
                                         & (somatic_mutations_dataframe["Matched_Norm_Sample_Barcode"].isin(samples["sample_id"]))]
@@ -87,6 +92,8 @@ def main():
                 samples[samples["sample_id"].isin([sample_somatic_mutations_dataframe["Matched_Norm_Sample_Barcode"].iloc[0]])].iloc[0, 1]
             sample_mutational_features_dataframe = \
                 retrieve_mutations_features_as_dataframe(somatic_mutations_dataframe=sample_somatic_mutations_dataframe,
+                                                         case_sample_name=None,
+                                                         control_sample_name=None,
                                                          case_sample_bam_filename=case_sample_bam_filename,
                                                          control_sample_bam_filename=control_sample_bam_filename,
                                                          ref_seq_filename=args.ref_seq_filename)
@@ -99,9 +106,16 @@ def main():
                                                            sample_mutational_features_dataframe])
         mutational_features_dataframe = mutational_features_dataframe[column_names]
     else:
+        case_sample_name = somatic_mutations_dataframe["Tumor_Sample_Barcode"].iloc[0]
+        control_sample_name = somatic_mutations_dataframe["Matched_Norm_Sample_Barcode"].iloc[0]
         sample_mutational_features_dataframe = \
-            retrieve_mutations_features_as_dataframe(somatic_mutations_dataframe, args.case_sample_bam_filename,
-                                                     args.control_sample_bam_filename, args.ref_seq_filename)
+            retrieve_mutations_features_as_dataframe(somatic_mutations_dataframe,
+                                                     case_sample_name=case_sample_name,
+                                                     control_sample_name=control_sample_name,
+                                                     case_sample_bam_filename=args.case_sample_bam_filename,
+                                                     control_sample_bam_filename=args.control_sample_bam_filename,
+                                                     ref_seq_filename=args.ref_seq_filename)
+        # TODO: add tumor and sample names
         mutational_features_dataframe = sample_mutational_features_dataframe
 
     if mutational_features_dataframe is not None:
@@ -109,8 +123,8 @@ def main():
 
 
 #@profile
-def retrieve_mutations_features_as_dataframe(somatic_mutations_dataframe, case_sample_bam_filename,
-                                             control_sample_bam_filename, ref_seq_filename):
+def retrieve_mutations_features_as_dataframe(somatic_mutations_dataframe, case_sample_name, control_sample_name,
+                                             case_sample_bam_filename, control_sample_bam_filename, ref_seq_filename):
     somatic_mutations = _create_somatic_mutations(somatic_mutations_dataframe)
     case_sample_bam_file = AlignmentFile(case_sample_bam_filename, "rb")
     control_sample_bam_file = AlignmentFile(control_sample_bam_filename, "rb")
@@ -188,7 +202,8 @@ def retrieve_mutations_features_as_dataframe(somatic_mutations_dataframe, case_s
 def _create_somatic_mutations(somatic_mutations_dataframe):
     somatic_mutations_dataframe = somatic_mutations_dataframe.reset_index(drop=True)
     somatic_mutations_dataframe = somatic_mutations_dataframe[["Chromosome", "Start_position", "End_position",
-                                                               "Reference_Allele", "Tumor_Seq_Allele2"]]
+                                                               "Reference_Allele", "Tumor_Seq_Allele2",
+                                                               "Tumor_Sample_Barcode", "Matched_Norm_Sample_Barcode"]]
     return somatic_mutations_dataframe.apply(SomaticMutation.create, axis=1)
 
 
